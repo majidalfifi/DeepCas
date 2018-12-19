@@ -46,10 +46,10 @@ def get_batch(x, y, sz, step, batch_size=128):
     return batch_x, batch_y, batch_sz
 
 version = config.version
-x_train, y_train, sz_train, vocabulary_size = pickle.load(open('data/data_train.pkl','r'))
-x_test, y_test, sz_test, _ = pickle.load(open('data/data_test.pkl','r'))
-x_val, y_val, sz_val, _ = pickle.load(open('data/data_val.pkl','r'))
-node_vec = pickle.load(open('data/node_vec.pkl', 'r'))
+x_train, y_train, sz_train, vocabulary_size = pickle.load(open('data/data_train.pkl','rb'))
+x_test, y_test, sz_test, _ = pickle.load(open('data/data_test.pkl','rb'))
+x_val, y_val, sz_val, _ = pickle.load(open('data/data_val.pkl','rb'))
+node_vec = pickle.load(open('data/node_vec.pkl', 'rb'))
 
 
 training_iters = config.training_iters
@@ -75,11 +75,11 @@ while step * batch_size < training_iters:
     if step % display_step == 0:
         # Calculate batch loss
         val_loss = []
-        for val_step in range(len(y_val)/batch_size):
+        for val_step in range(int(len(y_val)/batch_size)):
             val_x, val_y, val_sz = get_batch(x_val, y_val, sz_val, val_step, batch_size=batch_size)
             val_loss.append(model.get_error(val_x, val_y, val_sz))
         test_loss = []
-        for test_step in range(len(y_test)/batch_size):
+        for test_step in range(int(len(y_test)/batch_size)):
             test_x, test_y, test_sz = get_batch(x_test, y_test, sz_test, test_step, batch_size=batch_size)
             test_loss.append(model.get_error(test_x, test_y, test_sz))
         
@@ -100,9 +100,9 @@ while step * batch_size < training_iters:
             break
         
     step += 1
-print "Finished!\n----------------------------------------------------------------"
-print "Time:", time.time()-start
-print "Valid Loss:", best_val_loss
-print "Test Loss:", best_test_loss
+print ("Finished!\n----------------------------------------------------------------")
+print ("Time:", time.time()-start)
+print ("Valid Loss:", best_val_loss)
+print ("Test Loss:", best_test_loss)
 
 

@@ -77,13 +77,13 @@ def get_global_info():
   for line in rfile:
     line = line.rstrip('\r\n')
     parts = line.split("\t\t")
-    source = long(parts[0])
+    source = int(parts[0])
     if parts[1] != "null":
       node_freq_strs = parts[1].split("\t")
       for node_freq_str in node_freq_strs:
         node_freq = node_freq_str.split(":")
         weight = int(node_freq[1])
-        target = long(node_freq[0])
+        target = int(node_freq[0])
         if opts.trans_type == 0:
           edge_to_weight[(source, target)] = weight
       degree = len(node_freq_strs)
@@ -107,8 +107,8 @@ def parse_graph(graph_string):
   node_to_edges = dict()
   for edge_str in edge_strs:
     edge_parts = edge_str.split(":")
-    source = long(edge_parts[0])
-    target = long(edge_parts[1])
+    source = int(edge_parts[0])
+    target = int(edge_parts[1])
 
     if not source in node_to_edges:
       neighbors = list()
@@ -118,7 +118,7 @@ def parse_graph(graph_string):
     neighbors.append((target, get_global_degree(target)))
 
   nx_G = nx.DiGraph()
-  for source, nbr_weights in node_to_edges.iteritems():
+  for source, nbr_weights in node_to_edges.items():
     for nbr_weight in nbr_weights:
       target = nbr_weight[0]
 
@@ -149,14 +149,14 @@ def parse_graph(graph_string):
   weight_sum = 0.0
 
   # Obtain sampling probabilities of roots.
-  for node, weight in nx_G.out_degree_iter(weight="weight"):
+  for node, weight in nx_G.out_degree(weight="weight"):
     org_weight = weight
     if weight == 0: weight += pseudo_count
     weight_sum += weight
     if org_weight > 0:
       weight_sum_noleaf += weight
 
-  for node, weight in nx_G.out_degree_iter(weight="weight"):
+  for node, weight in nx_G.out_degree(weight="weight"):
     org_weight = weight
     if weight == 0: weight += pseudo_count
     roots.append(node)
@@ -230,7 +230,7 @@ def learn_embeddings(walks, embeding_size):
   # Learn embeddings by optimizing the Skipgram objective using SGD.
   model = Word2Vec(walks, size=embeding_size, window=opts.window_size, min_count=0, sg=1, workers=opts.workers,
                    iter=opts.iter)
-  model.save_word2vec_format(embed_file)
+  model.wv.save_word2vec_format(embed_file)
 
 if __name__ == "__main__":
   get_global_info()

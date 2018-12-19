@@ -14,7 +14,7 @@ def batched_scalar_mul(w, x):
     x_t = tf.transpose(x, [2, 0, 1, 3])
     shape = x_t.get_shape()
     x_t = tf.reshape(x_t, [int(shape[0]), -1])
-    wx_t = tf.mul(w, x_t)
+    wx_t = tf.multiply(w, x_t)
     res = tf.reshape(wx_t, [int(shape[0]), -1, int(shape[2]), int(shape[3])])
     res = tf.transpose(res, [1, 2, 0, 3])
     return res
@@ -23,7 +23,7 @@ def batched_scalar_mul3(w, x):
     x_t = tf.transpose(x, [1, 0, 2])
     shape = x_t.get_shape()
     x_t = tf.reshape(x_t, [int(shape[0]), -1])
-    wx_t = tf.mul(w, x_t)
+    wx_t = tf.multiply(w, x_t)
     res = tf.reshape(wx_t, [int(shape[0]), -1, int(shape[2])])
     res = tf.transpose(res, [1, 0, 2])
     return res
@@ -94,7 +94,7 @@ class DeepCas(object):
         self.error = error
         self.train_op = train_op
         
-        init_op = tf.initialize_all_variables()
+        init_op = tf.global_variables_initializer()
         self.sess.run(init_op)
         
     
@@ -133,7 +133,7 @@ class DeepCas(object):
         with tf.device('/gpu:0'):
             with tf.variable_scope('deepcas') as scope:
                 with tf.variable_scope('embedding'):
-                    x_vector = tf.nn.dropout(tf.nn.embedding_lookup(self.embedding, self.x), 
+                    x_vector = tf.nn.dropout(tf.nn.embedding_lookup(self.embedding, self.x),
                                              self.dropout_prob)
                     # (batch_size, n_sequences, n_steps, n_input)
             
@@ -150,11 +150,10 @@ class DeepCas(object):
                     # (n_steps*n_sequences*batch_size, n_input)
             
                     # Split to get a list of 'n_steps' tensors of shape (n_sequences*batch_size, n_input)
-                    x_vector = tf.split(0, self.n_steps, x_vector)
-
-                    outputs, _, _ = rnn.bidirectional_rnn(self.gru_fw_cell, self.gru_bw_cell, x_vector,
+                    x_vector = tf.split(x_vector, self.n_steps, 0)
+                    outputs, _, _ = rnn.static_bidirectional_rnn(self.gru_fw_cell, self.gru_bw_cell, x_vector,
                                                           dtype=tf.float32)
-                    hidden_states = tf.transpose(tf.pack(outputs), [1, 0, 2])
+                    hidden_states = tf.transpose(tf.stack(outputs), [1, 0, 2])
                     # (n_sequences*batch_size, n_steps, 2*n_hidden_gru)
                     hidden_states = tf.transpose(tf.reshape(hidden_states, [self.n_sequences, -1, self.n_steps, 2*self.n_hidden_gru]), [1, 0, 2, 3])
                     # (batch_size, n_sequences, n_steps, 2*n_hiddent_gru)
@@ -168,19 +167,18 @@ class DeepCas(object):
             
                     # attention over sequence batches
                     p_geo = tf.sigmoid(self.a_geo)
-                    attention_batch = tf.pow(tf.mul(p_geo, tf.ones_like(self.sz)), tf.div(1.0 + tf.log(self.sz), tf.log(2.0)))
+                    attention_batch = tf.pow(tf.multiply(p_geo, tf.ones_like(self.sz)), tf.div(1.0 + tf.log(self.sz), tf.log(2.0)))
             
                     attention_batch_seq = tf.tile(attention_batch, [1, self.sequence_batch_size])
-                    for i in range(1, self.n_sequences/self.sequence_batch_size):
-                        attention_batch_seq = tf.concat(1, 
-                                                        [attention_batch_seq, 
+                    for i in range(1, int(self.n_sequences/self.sequence_batch_size)):
+                        attention_batch_seq = tf.concat([attention_batch_seq,
                                                          tf.tile(tf.pow(1-attention_batch, i)*attention_batch, 
-                                                                 [1, self.sequence_batch_size])])
+                                                                 [1, self.sequence_batch_size])], 1)
                     attention_batch_lin = tf.reshape(attention_batch_seq, [-1, 1])
             
                     shape = attention_result.get_shape()
                     shape = [-1, int(shape[1]), int(shape[2]), int(shape[3])]
-                    attention_result_t = tf.mul(attention_batch_lin, tf.reshape(attention_result, [-1, shape[2]*shape[3]]))
+                    attention_result_t = tf.multiply(attention_batch_lin, tf.reshape(attention_result, [-1, shape[2]*shape[3]]))
                     attention_result = tf.reshape(attention_result_t, [-1, shape[1], shape[2], shape[3]])
                     hidden_graph = tf.reduce_sum(attention_result, reduction_indices=[1, 2])
         
